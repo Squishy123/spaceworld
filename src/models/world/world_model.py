@@ -14,6 +14,8 @@ from collections import deque
 World Model Class
 '''
 
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
+
 
 class World_Model():
     def __init__(self, env, agent, config):
@@ -40,10 +42,14 @@ class World_Model():
         self.replay_memory = ReplayMemory(self.config['MEMORY_CAPACITY'])
 
         # model net
-        self.model = Transform_Autoencoder(num_actions)
+        self.model = Transform_Autoencoder(num_actions, frame_stacks=self.config["FRAME_STACK"])
 
         # optimizer
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])
+        parameters_to_update = []
+        for p in self.model.parameters():
+            if p.requires_grad == True:
+                parameters_to_update.append(p)
+        self.optimizer = torch.optim.Adam(parameters_to_update, lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])
 
     # load model weights
     def load(self, path="world_model_weights.pth"):
@@ -71,15 +77,42 @@ class World_Model():
         screen = screen.transpose((2, 0, 1))
         screen = np.ascontiguousarray(screen, dtype=np.float32) / 255
         screen = torch.from_numpy(screen)
-        return T.Compose([T.ToPILImage(),
-                          T.Resize(40, interpolation=Image.CUBIC),
-                          T.ToTensor()])(screen).unsqueeze(0).to(self.device)
+        return T.Compose([
+            T.ToPILImage(),
+            T.Resize(256),
+            T.CenterCrop(224),
+            T.Resize(64, interpolation=Image.CUBIC),
+            T.ToTensor()])(screen).unsqueeze(0).to(self.device)
 
     # optimize model
     def learn(self):
-        return
-        # training cycle
+        if len(self.replay_memory) < self.config['BATCH_SIZE']:
+            return 0
 
+        # sample from replaymemory
+        batch = self.replay_memory.sample(self.config['BATCH_SIZE'])
+
+        state_batch = torch.cat(batch.state).to(self.device)
+        action_batch = torch.cat(batch.action).to(self.device)
+        reward_batch = torch.cat(batch.reward).to(self.device)
+        next_state_batch = torch.cat(batch.next_state).to(self.device)
+
+        computed_next_state = self.model(state_batch, action_batch)
+
+        loss = torch.nn.functional.mse_loss(computed_next_state, next_state_batch)
+
+        self.optimizer.zero_grad()
+        loss.backward()
+
+        for param in self.model.parameters():
+            if param.grad != None:
+                param.grad.data.clamp_(-1, 1)
+
+        self.optimizer.step()
+
+        return loss.item()
+
+    # training cycle
     def train(self, callbacks=[], render=False):
         for epoch in range(1, self.config["NUMBER_OF_EPOCHS"] + 1):
             for episode in range(1, self.config["EPISODES_PER_EPOCH"] + 1):
@@ -91,6 +124,10 @@ class World_Model():
                 init_state = self.get_screen()
                 screen_stack = deque([init_state] * self.config['FRAME_STACK'], maxlen=self.config['FRAME_STACK'])
                 state = torch.cat(list(screen_stack), dim=1)
+
+                ep_reward = 0
+                num_steps = 0
+                ep_loss = 0
 
                 negative_reward_count = 0
 
@@ -107,6 +144,9 @@ class World_Model():
 
                     action = self.agent.act(state, reward, done)
 
+                    step_action = torch.empty(1, 1, 10, 10, device=self.device).fill_(action)
+                    # print(step_action.shape)
+
                     for _ in range(self.config["FRAME_SKIP"]):
                         num_steps += 1
                         next_state, reward, done, _ = self.env.step(action)
@@ -114,14 +154,15 @@ class World_Model():
                         if done:
                             break
 
+                    ep_reward += step_reward
                     step_reward = torch.tensor([reward], device=self.device)
 
                     # generate next state stack
                     screen_stack.append(self.get_screen())
-                    next_state = torch.cat(list(screen_stack), dim=1) if not done else None
-
+                    next_state = torch.cat(list(screen_stack), dim=1) if not done else torch.zeros(1, 3*self.config["FRAME_STACK"], 64, 64, device=self.device)
+                    # print(next_state.shape)
                     # append to replay memory
-                    self.replay_memory.append(state, action, next_state, step_reward)
+                    self.replay_memory.append(state, step_action, next_state, step_reward)
                     state = next_state
 
                     if step_reward < 0 and num_steps > 200:
@@ -131,5 +172,12 @@ class World_Model():
                         else:
                             negative_reward_count = 0
 
+                    # learn
+                    ep_loss += self.learn()
+
                     if done:
                         break
+
+                # run callbacks
+                for c in callbacks:
+                    c(self, epoch, episode, ep_reward, ep_loss, num_steps)
