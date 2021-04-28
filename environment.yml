@@ -1,0 +1,8 @@
+name: spaceworld
+channels:
+  - defaults
+dependencies:
+  - pip
+  - python=3.8
+  - git
+  - swig
