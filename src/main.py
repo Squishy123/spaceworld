@@ -4,6 +4,7 @@ from models.world.world_model import World_Model
 from agents.random_agent import RandomAgent
 
 import matplotlib.pyplot as plt
+from gym import wrappers
 import gym
 
 
@@ -27,9 +28,11 @@ def save(model, epoch, episode, ep_reward, ep_loss, num_steps):
         np.savetxt("data.txt", np.array([rewards, num_steps_acc, loss]))
 
 
+'''
 fig1, (ax1) = plt.subplots(1, constrained_layout=True)
 fig2, (ax2) = plt.subplots(1, constrained_layout=True)
 fig3, (ax3) = plt.subplots(1, constrained_layout=True)
+'''
 
 
 def plot(agent, epoch, episode, ep_reward, ep_loss, num_steps):
@@ -57,4 +60,4 @@ def plot(agent, epoch, episode, ep_reward, ep_loss, num_steps):
 
 
 # print(model.get_screen().shape)
-model.train(render=True, callbacks=[log, save, plot])
+model.train(render=True, callbacks=[log])  # [log, save, plot])

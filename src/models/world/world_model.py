@@ -87,7 +87,7 @@ class World_Model():
     # optimize model
     def learn(self):
         if len(self.replay_memory) < self.config['BATCH_SIZE']:
-            return 0
+            return 0, []
 
         # sample from replaymemory
         batch = self.replay_memory.sample(self.config['BATCH_SIZE'])
@@ -98,6 +98,10 @@ class World_Model():
         next_state_batch = torch.cat(batch.next_state).to(self.device)
 
         computed_next_state = self.model(state_batch, action_batch)
+        # print(computed_next_state[0].unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().shape)
+        # plt.imshow(computed_next_state[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy(), interpolation='none')
+        # plt.draw()
+        # plt.pause(1e-3)
 
         loss = torch.nn.functional.mse_loss(computed_next_state, next_state_batch)
 
@@ -110,7 +114,7 @@ class World_Model():
 
         self.optimizer.step()
 
-        return loss.item()
+        return loss.item(), computed_next_state[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy()
 
     # training cycle
     def train(self, callbacks=[], render=False):
@@ -173,7 +177,12 @@ class World_Model():
                             negative_reward_count = 0
 
                     # learn
-                    ep_loss += self.learn()
+                    loss_val, generated = self.learn()
+                    if generated != []:
+                        plt.imshow(generated)
+                        plt.draw()
+                        plt.pause(1e-3)
+                    ep_loss += loss_val
 
                     if done:
                         break
