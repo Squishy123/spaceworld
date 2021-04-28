@@ -28,11 +28,35 @@ def save(model, epoch, episode, ep_reward, ep_loss, num_steps):
         np.savetxt("data.txt", np.array([rewards, num_steps_acc, loss]))
 
 
-'''
+
 fig1, (ax1) = plt.subplots(1, constrained_layout=True)
 fig2, (ax2) = plt.subplots(1, constrained_layout=True)
 fig3, (ax3) = plt.subplots(1, constrained_layout=True)
-'''
+
+
+def print_screen(agent,epoch,episode,ep_reward,ep_loss,num_steps):
+
+    if episode % 10 == 0:
+        batch = agent.replay_memory.sample(1)
+
+        state_batch = torch.cat(batch.state).to(self.device)
+        action_batch = torch.cat(batch.action).to(self.device)
+        reward_batch = torch.cat(batch.reward).to(self.device)
+        next_state_batch = torch.cat(batch.next_state).to(self.device)
+
+        computed_next_state = self.model(state_batch, action_batch)
+        computed_image=computed_next_state[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy()
+        state_image=state_batch[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy()
+        next_state_image=next_state_batch[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy()
+
+        fig, (ax1,ax2,ax3) = plt.subplots(1,3)
+        ax1.imshow(np.clip(computed_image, 0, 1))
+        ax2.imshow(np.clip(state_image, 0, 1))
+        ax3.imshow(np.clip(next_state_image, 0, 1))
+        plt.savefig(f"results/print_screen_{epoch}_{episode}.png")
+        fig.close()
+
+
 
 
 def plot(agent, epoch, episode, ep_reward, ep_loss, num_steps):
@@ -60,4 +84,4 @@ def plot(agent, epoch, episode, ep_reward, ep_loss, num_steps):
 
 
 # print(model.get_screen().shape)
-model.train(render=True, callbacks=[log])  # [log, save, plot])
+model.train(render=True, callbacks=[log,save,plot,print_screen])  # [log, save, plot])

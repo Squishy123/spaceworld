@@ -186,10 +186,10 @@ class World_Model():
 
                     # learn
                     loss_val, generated = self.learn()
-                    if generated != []:
-                        plt.imshow(np.clip(generated, 0, 1))
-                        plt.draw()
-                        plt.pause(1e-3)
+                    # if generated != []:
+                    #     plt.imshow(np.clip(generated, 0, 1))
+                    #     plt.draw()
+                    #     plt.pause(1e-3)
                     ep_loss += loss_val
 
                     if done:
