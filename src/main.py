@@ -27,8 +27,7 @@ def save(model, epoch, episode, ep_reward, ep_loss, num_steps):
     if episode % 100 == 0:
         print("SAVING MODEL")
         model.save(f"results/world_model_weights_{epoch}_{episode}.pth")
-        np.savetxt("data.txt", np.array([rewards, num_steps_acc, loss]))
-
+        np.savetxt("results/data.txt", np.array([rewards, num_steps_acc, loss]))
 
 
 fig1, (ax1) = plt.subplots(1, constrained_layout=True)
@@ -36,9 +35,8 @@ fig2, (ax2) = plt.subplots(1, constrained_layout=True)
 fig3, (ax3) = plt.subplots(1, constrained_layout=True)
 
 
-def print_screen(agent,epoch,episode,ep_reward,ep_loss,num_steps):
-
-    if episode % 2 == 0:
+def print_screen(agent, epoch, episode, ep_reward, ep_loss, num_steps):
+    if episode % 10 == 0:
         batch = agent.replay_memory.sample(1)
 
         state_batch = torch.cat(batch.state).to(agent.device)
@@ -47,31 +45,25 @@ def print_screen(agent,epoch,episode,ep_reward,ep_loss,num_steps):
         next_state_batch = torch.cat(batch.next_state).to(agent.device)
 
         computed_next_state = agent.model(state_batch, action_batch)
-        computed_image=computed_next_state[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy()
-        state_image=state_batch[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy()
-        next_state_image=next_state_batch[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy()
+        computed_image = computed_next_state[0].detach().unsqueeze(0).index_select(1, torch.tensor([6, 7, 8])).cpu().squeeze(0).permute(1, 2, 0).numpy()
+        state_image = state_batch[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy()
+        next_state_image = next_state_batch[0].detach().unsqueeze(0).index_select(1, torch.tensor([6, 7, 8])).cpu().squeeze(0).permute(1, 2, 0).numpy()
 
-        
-        fig, (ax1,ax2,ax3) = plt.subplots(1,3)
-        ax1.imshow(np.clip(computed_image, 0, 1))
-        ax1.set_title("dream-state")
-        ax2.imshow(np.clip(state_image, 0, 1))
-        ax2.set_title("this-state")
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+        ax1.imshow(np.clip(state_image, 0, 1))
+        ax1.set_title("current-state")
+        ax2.imshow(np.clip(computed_image, 0, 1))
+        ax2.set_title("predicted-next-state")
         ax3.imshow(np.clip(next_state_image, 0, 1))
         ax3.set_title("next-state")
 
-
-
-        ax1.text(0,100,str([action_batch[0][0][0][0].item(), action_batch[0][1][0][0].item(), action_batch[0][2][0][0].item()]),fontsize=10)
-        ax1.text(0,130,"Left/Right",fontsize=10)
-        ax1.text(40,130,"Left/Right",fontsize=10)
-        ax1.text(80,130,"Left/Right",fontsize=10)
-
+        ax1.text(0, 100, str([action_batch[0][0][0][0].item(), action_batch[0][1][0][0].item(), action_batch[0][2][0][0].item()]), fontsize=10)
+       # ax1.text(0, 100, str(action_batch[0][0][0][0].item()), fontsize=10)
+        ax1.text(0, 130, "Left/Right", fontsize=10)
+        ax1.text(40, 130, "Gas", fontsize=10)
+        ax1.text(80, 130, "Brake", fontsize=10)
 
         plt.savefig(f"results/print_screen_{epoch}_{episode}.png")
-
-
-
 
 
 def plot(agent, epoch, episode, ep_reward, ep_loss, num_steps):
@@ -99,4 +91,4 @@ def plot(agent, epoch, episode, ep_reward, ep_loss, num_steps):
 
 
 # print(model.get_screen().shape)
-model.train(render=True, callbacks=[log,save,plot,print_screen])  # [log, save, plot])
+model.train(render=True, callbacks=[log, save, plot, print_screen])  # [log, save, plot])
