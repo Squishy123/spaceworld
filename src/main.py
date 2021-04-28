@@ -8,7 +8,7 @@ from gym import wrappers
 import gym
 
 
-env = gym.make('LunarLander-v2')
+env = gym.make('CarRacing-v0')
 agent = RandomAgent(env.action_space)
 model = World_Model(env, agent, config)
 

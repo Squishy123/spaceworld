@@ -31,6 +31,8 @@ class World_Model():
         num_actions = 0
         if isinstance(self.env.action_space, spaces.Discrete):
             num_actions = 1
+        if isinstance(self.env.action_space, spaces.Box):
+            num_actions = self.env.action_space.shape[0]
 
         # set agent
         self.agent = agent
@@ -82,7 +84,9 @@ class World_Model():
             T.Resize(256),
             T.CenterCrop(224),
             T.Resize(64, interpolation=Image.CUBIC),
-            T.ToTensor()])(screen).unsqueeze(0).to(self.device)
+            T.ToTensor(),
+            # T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])(screen).unsqueeze(0).to(self.device)
 
     # optimize model
     def learn(self):
@@ -147,8 +151,12 @@ class World_Model():
                     step_reward = 0
 
                     action = self.agent.act(state, reward, done)
-
-                    step_action = torch.empty(1, 1, 10, 10, device=self.device).fill_(action)
+                    if type(action) is np.ndarray:
+                        step_action = torch.tensor([], device=self.device)
+                        for a in action:
+                            step_action = torch.cat((step_action, torch.empty(1, 1, 10, 10, device=self.device).fill_(a)), dim=1)
+                    else:
+                        step_action = torch.empty(1, 1, 10, 10, device=self.device).fill_(action)
                     # print(step_action.shape)
 
                     for _ in range(self.config["FRAME_SKIP"]):
@@ -179,7 +187,7 @@ class World_Model():
                     # learn
                     loss_val, generated = self.learn()
                     if generated != []:
-                        plt.imshow(generated)
+                        plt.imshow(np.clip(generated, 0, 1))
                         plt.draw()
                         plt.pause(1e-3)
                     ep_loss += loss_val
