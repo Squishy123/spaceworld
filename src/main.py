@@ -4,6 +4,7 @@ import torch
 
 from models.world.world_model import World_Model
 from agents.random_agent import RandomAgent
+from agents.human_agent import HumanAgent
 
 import matplotlib.pyplot as plt
 from gym import wrappers
@@ -13,7 +14,7 @@ import numpy as np
 
 env = gym.make('LunarLander-v2')
 agent = RandomAgent(env.action_space)
-model = World_Model(env, agent, sf_config)
+model = World_Model(env, agent, base_config)
 
 rewards = []
 num_steps_acc = []
@@ -85,7 +86,7 @@ def plot(agent, epoch, episode, ep_reward, ep_loss, num_steps):
     ax3.set_title('Duration Over Episodes')
     ax3.set_ylabel('Duration')
     ax3.set_xlabel('Episodes')
-    ax3.scatter((epoch * 100) + episode, num_steps, color="orange")
+    ax3.scatter(((epoch-1) * 100) + episode, num_steps, color="orange")
     num_steps_acc.append(num_steps)
 
     fig1.savefig("results/plt1.png")
@@ -95,8 +96,8 @@ def plot(agent, epoch, episode, ep_reward, ep_loss, num_steps):
 
 # print(model.get_screen().shape)
 
-model.load("results_single_frame/world_model_weights_5_100.pth")
-# print(model.config)
+model.load("results_baseline/world_model_weights_5_100.pth")
+agent = HumanAgent()
 
 state = model.reset()
 reward = 0
@@ -112,7 +113,7 @@ for i in range(100):
     # print(action)
     model.env.step(action)
     env_state = model.env.render()
-    for _ in range(10):
+    for _ in range(1):
         model.step(action)
     next_state = model.render()
 
@@ -122,7 +123,7 @@ for i in range(100):
 
     plt.imshow((model.render()))
     plt.draw()
-    plt.pause(1e-3)
+    plt.pause(1e-1)
 
     state = next_state
 
