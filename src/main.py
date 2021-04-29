@@ -95,7 +95,7 @@ def plot(agent, epoch, episode, ep_reward, ep_loss, num_steps):
 
 # print(model.get_screen().shape)
 
-model.load("results/world_model_weights_5_100.pth")
+model.load("results_single_frame/world_model_weights_5_100.pth")
 # print(model.config)
 
 state = model.reset()

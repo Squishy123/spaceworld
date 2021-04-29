@@ -54,9 +54,7 @@ class World_Model():
         self.optimizer = torch.optim.Adam(parameters_to_update, lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])
 
         # sim
-        self.state = []
-        self.state_stack = []
-        self.action = []
+        self.screen_stack = []
 
     # load model weights
 
@@ -133,16 +131,14 @@ class World_Model():
         self.env.reset()
         init_state = self.get_screen()
         self.screen_stack = deque([init_state] * self.config['FRAME_STACK'], maxlen=self.config['FRAME_STACK'])
-        for _ in range(15):
+        for _ in range(25):
             init_state, reward, done, _ = self.env.step(self.env.action_space.sample())
             self.screen_stack.append(self.get_screen())
-
-        self.state = torch.cat(tuple(self.screen_stack), dim=1).to(self.device)
 
         return self.render()
 
     def render(self):
-        return np.clip(self.state.detach().index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy(), 0, 1)
+        return np.clip(self.screen_stack[0].detach().index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy(), 0, 1)
 
     def step(self, action):
         if type(action) is np.ndarray:
@@ -160,11 +156,8 @@ class World_Model():
         if torch.sum(computed_next_state) == torch.tensor(0):
             done = True
 
-        calc_loss = torch.nn.functional.mse_loss(self.state, computed_next_state)
-        print(calc_loss.item())
-
-        self.state = computed_next_state
-        self.state_stack.append(self.render())
+        calc_loss = torch.nn.functional.mse_loss(state_batch, computed_next_state)
+        self.screen_stack.append(computed_next_state)
 
         return self.render(), 0, done
 
