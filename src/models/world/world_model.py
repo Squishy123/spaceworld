@@ -91,7 +91,7 @@ class World_Model():
             T.CenterCrop(224),
             T.Resize(64, interpolation=Image.CUBIC),
             T.ToTensor(),
-            # T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            #T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])(screen).unsqueeze(0).to(self.device)
 
     # optimize model
@@ -100,7 +100,7 @@ class World_Model():
             return 0
 
         # sample from replaymemory
-        batch = self.replay_memory.sample(self.config['BATCH_SIZE'], random_sample=False)
+        batch = self.replay_memory.sample(self.config['BATCH_SIZE'])
 
         state_batch = torch.cat(batch.state).to(self.device)
         action_batch = torch.cat(batch.action).to(self.device)
@@ -113,6 +113,9 @@ class World_Model():
         # plt.draw()
         # plt.pause(1e-3)
 
+        #calc_loss = torch.nn.functional.mse_loss(state_batch, next_state_batch)
+        # print(calc_loss.item())
+
         loss = torch.nn.functional.mse_loss(computed_next_state, next_state_batch)
 
         self.optimizer.zero_grad()
@@ -124,7 +127,7 @@ class World_Model():
 
         self.optimizer.step()
 
-        return loss.item()
+        return loss.item()  # calc_loss.item()
 
     def reset(self):
         self.env.reset()
@@ -134,10 +137,12 @@ class World_Model():
             init_state, reward, done, _ = self.env.step(self.env.action_space.sample())
             self.screen_stack.append(self.get_screen())
 
-        self.state = init_state
+        self.state = torch.cat(tuple(self.screen_stack), dim=1).to(self.device)
+
+        return self.render()
 
     def render(self):
-        return self.state.detach().index_select(1, torch.tensor([6, 7, 8])).cpu().squeeze(0).permute(1, 2, 0).numpy()
+        return np.clip(self.state.detach().index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy(), 0, 1)
 
     def step(self, action):
         if type(action) is np.ndarray:
@@ -146,12 +151,8 @@ class World_Model():
                 step_action = torch.cat((step_action, torch.empty(1, 1, 10, 10, device=self.device).fill_(a)), dim=1)
         else:
             step_action = torch.empty(1, 1, 10, 10, device=self.device).fill_(action)
-        # self.action.append(step_action)
 
         state_batch = torch.cat(tuple(self.screen_stack), dim=1).to(self.device)
-        #action_batch = torch.cat((step_action, step_action), dim=1).to(self.device)
-        # print(state_batch.shape)
-        # print(step_action.shape)
 
         # calculate next state
         computed_next_state = self.model(state_batch, step_action)
@@ -159,10 +160,13 @@ class World_Model():
         if torch.sum(computed_next_state) == torch.tensor(0):
             done = True
 
-        self.state_stack.append(computed_next_state)
-        self.state = computed_next_state
+        calc_loss = torch.nn.functional.mse_loss(self.state, computed_next_state)
+        print(calc_loss.item())
 
-        return computed_next_state, 0, done
+        self.state = computed_next_state
+        self.state_stack.append(self.render())
+
+        return self.render(), 0, done
 
     # training cycle
 
