@@ -138,8 +138,8 @@ class World_Model():
         self.env.reset()
         init_state = self.get_screen(mod="start")
         self.screen_stack = deque([init_state] * self.config['FRAME_STACK'], maxlen=self.config['FRAME_STACK'])
-        for _ in range(25):
-            init_state, reward, done, _ = self.env.step(self.env.action_space.sample())
+        for _ in range(20):
+            init_state, reward, done, _ = self.env.step(0)
             self.screen_stack.append(self.get_screen())
 
         return self.render()

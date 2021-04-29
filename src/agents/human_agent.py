@@ -3,5 +3,12 @@
 class HumanAgent(object):
 
     def act(self, observation, reward, done):
-        action = input("Type an Action 1-4:")
-        return int(action)
+        action = input("wasd:")
+        if action == "w":
+            print("YAY")
+            return 2
+        if action == "a":
+            return 1
+        if action == "d":
+            return 3
+        return 0
