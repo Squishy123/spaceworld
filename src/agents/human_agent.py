@@ -5,7 +5,6 @@ class HumanAgent(object):
     def act(self, observation, reward, done):
         action = input("wasd:")
         if action == "w":
-            print("YAY")
             return 2
         if action == "a":
             return 1
