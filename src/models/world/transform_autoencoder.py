@@ -35,7 +35,7 @@ class Transform_Autoencoder(nn.Module):
             ('decoder_Tconv2', nn.ConvTranspose2d(32, 16, kernel_size=3, stride=2, padding=1, output_padding=1)),
             ('decoder_relu2', nn.ReLU()),
             ('decoder_Tconv3', nn.ConvTranspose2d(16, 3 * frame_stacks, kernel_size=3, stride=2, padding=1, output_padding=1)),
-            ('decoder_relu3', nn.LeakyReLU()),
+            ('decoder_relu3', nn.Sigmoid()),
         ]))
 
     # forward pass takes initial image and array of transforms

@@ -53,11 +53,17 @@ class World_Model():
                 parameters_to_update.append(p)
         self.optimizer = torch.optim.Adam(parameters_to_update, lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])
 
+        # sim
+        self.state = []
+        self.state_stack = []
+        self.action = []
+
     # load model weights
+
     def load(self, path="world_model_weights.pth"):
         checkpoint = torch.load(path)
         # reinit
-        self.__init__(self.env, checkpoint['config'])
+        self.__init__(self.env, self.agent, checkpoint['config'])
 
         # model net
         self.model.load_state_dict(checkpoint['model_state_dict'])
@@ -91,10 +97,10 @@ class World_Model():
     # optimize model
     def learn(self):
         if len(self.replay_memory) < self.config['BATCH_SIZE']:
-            return 0, []
+            return 0
 
         # sample from replaymemory
-        batch = self.replay_memory.sample(self.config['BATCH_SIZE'])
+        batch = self.replay_memory.sample(self.config['BATCH_SIZE'], random_sample=False)
 
         state_batch = torch.cat(batch.state).to(self.device)
         action_batch = torch.cat(batch.action).to(self.device)
@@ -118,9 +124,48 @@ class World_Model():
 
         self.optimizer.step()
 
-        return loss.item(), computed_next_state[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy()
+        return loss.item()
+
+    def reset(self):
+        self.env.reset()
+        init_state = self.get_screen()
+        self.screen_stack = deque([init_state] * self.config['FRAME_STACK'], maxlen=self.config['FRAME_STACK'])
+        for _ in range(15):
+            init_state, reward, done, _ = self.env.step(self.env.action_space.sample())
+            self.screen_stack.append(self.get_screen())
+
+        self.state = init_state
+
+    def render(self):
+        return self.state.detach().index_select(1, torch.tensor([6, 7, 8])).cpu().squeeze(0).permute(1, 2, 0).numpy()
+
+    def step(self, action):
+        if type(action) is np.ndarray:
+            step_action = torch.tensor([], device=self.device)
+            for a in action:
+                step_action = torch.cat((step_action, torch.empty(1, 1, 10, 10, device=self.device).fill_(a)), dim=1)
+        else:
+            step_action = torch.empty(1, 1, 10, 10, device=self.device).fill_(action)
+        # self.action.append(step_action)
+
+        state_batch = torch.cat(tuple(self.screen_stack), dim=1).to(self.device)
+        #action_batch = torch.cat((step_action, step_action), dim=1).to(self.device)
+        # print(state_batch.shape)
+        # print(step_action.shape)
+
+        # calculate next state
+        computed_next_state = self.model(state_batch, step_action)
+        done = False
+        if torch.sum(computed_next_state) == torch.tensor(0):
+            done = True
+
+        self.state_stack.append(computed_next_state)
+        self.state = computed_next_state
+
+        return computed_next_state, 0, done
 
     # training cycle
+
     def train(self, callbacks=[], render=False):
         for epoch in range(1, self.config["NUMBER_OF_EPOCHS"] + 1):
             for episode in range(1, self.config["EPISODES_PER_EPOCH"] + 1):
@@ -142,11 +187,6 @@ class World_Model():
                 while True:
                     done = False
                     reward = 0
-
-                    # if render == True:
-                    #    plt.imshow(self.get_screen().cpu().squeeze(0).permute(1, 2, 0).numpy(), interpolation='none')
-                    #   plt.draw()
-                    #  plt.pause(1e-3)
 
                     step_reward = 0
 
@@ -184,13 +224,7 @@ class World_Model():
                         else:
                             negative_reward_count = 0
 
-                    # learn
-                    loss_val, generated = self.learn()
-                    # if generated != []:
-                    #     plt.imshow(np.clip(generated, 0, 1))
-                    #     plt.draw()
-                    #     plt.pause(1e-3)
-                    ep_loss += loss_val
+                    ep_loss += self.learn()
 
                     if done:
                         break

@@ -10,7 +10,7 @@ import gym
 import numpy as np
 
 
-env = gym.make('CarRacing-v0')
+env = gym.make('LunarLander-v2')
 agent = RandomAgent(env.action_space)
 model = World_Model(env, agent, config)
 
@@ -57,8 +57,8 @@ def print_screen(agent, epoch, episode, ep_reward, ep_loss, num_steps):
         ax3.imshow(np.clip(next_state_image, 0, 1))
         ax3.set_title("next-state")
 
-        ax1.text(0, 100, str([action_batch[0][0][0][0].item(), action_batch[0][1][0][0].item(), action_batch[0][2][0][0].item()]), fontsize=10)
-       # ax1.text(0, 100, str(action_batch[0][0][0][0].item()), fontsize=10)
+        #ax1.text(0, 100, str([action_batch[0][0][0][0].item(), action_batch[0][1][0][0].item(), action_batch[0][2][0][0].item()]), fontsize=10)
+        ax1.text(0, 100, str(action_batch[0][0][0][0].item()), fontsize=10)
         ax1.text(0, 130, "Left/Right", fontsize=10)
         ax1.text(40, 130, "Gas", fontsize=10)
         ax1.text(80, 130, "Brake", fontsize=10)
@@ -91,4 +91,20 @@ def plot(agent, epoch, episode, ep_reward, ep_loss, num_steps):
 
 
 # print(model.get_screen().shape)
+# model.load("results_lunar/world_model_weights_4_100.pth")
+'''
+state = model.reset()
+reward = 0
+done = False
+
+for _ in range(100):
+    action = agent.act(state, reward, done)
+    model.step(action)
+    plt.imshow((model.render()))
+    plt.draw()
+    plt.pause(1e-3)
+
+env.close()
+plt.close()
+'''
 model.train(render=True, callbacks=[log, save, plot, print_screen])  # [log, save, plot])
