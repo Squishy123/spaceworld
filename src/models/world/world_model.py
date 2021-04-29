@@ -167,6 +167,27 @@ class World_Model():
 
         return self.render(), 0, done
 
+    def no_update_step(self,action):
+        if type(action) is np.ndarray:
+            step_action = torch.tensor([], device=self.device)
+            for a in action:
+                step_action = torch.cat((step_action, torch.empty(1, 1, 10, 10, device=self.device).fill_(a)), dim=1)
+        else:
+            step_action = torch.empty(1, 1, 10, 10, device=self.device).fill_(action)
+
+        state_batch = torch.cat(tuple(self.screen_stack), dim=1).to(self.device)
+
+        # calculate next state
+        computed_next_state = self.model(state_batch, step_action)
+        done = False
+        if torch.sum(computed_next_state) == torch.tensor(0):
+            done = True
+
+        #self.screen_stack.append(self.get_screen())
+
+        return self.render(), 0, done
+
+
     # training cycle
 
     def train(self, callbacks=[], render=False):
