@@ -18,7 +18,8 @@ model = World_Model(env, agent, base_config)
 
 rewards = []
 num_steps_acc = []
-loss = []
+state_losses = []
+reward_losses = []
 
 
 def log(agent, epoch, episode, ep_reward, ep_loss, num_steps):
@@ -29,14 +30,13 @@ def save(model, epoch, episode, ep_reward, ep_loss, num_steps):
     if episode % 100 == 0:
         print("SAVING MODEL")
         model.save(f"results/world_model_weights_{epoch}_{episode}.pth")
-        np.savetxt("results/data.txt", np.array([rewards, num_steps_acc, loss]))
+        np.savetxt("results/data.txt", np.array([rewards, num_steps_acc, state_losses, reward_losses]))
 
 
-'''
 fig1, (ax1) = plt.subplots(1, constrained_layout=True)
 fig2, (ax2) = plt.subplots(1, constrained_layout=True)
 fig3, (ax3) = plt.subplots(1, constrained_layout=True)
-'''
+fig4, (ax4) = plt.subplots(1, constrained_layout=True)
 
 
 def print_screen(agent, epoch, episode, ep_reward, ep_loss, num_steps):
@@ -48,7 +48,7 @@ def print_screen(agent, epoch, episode, ep_reward, ep_loss, num_steps):
         reward_batch = torch.cat(batch.reward).to(agent.device)
         next_state_batch = torch.cat(batch.next_state).to(agent.device)
 
-        computed_next_state = agent.model(state_batch, action_batch)
+        computed_next_state, computed_reward = agent.model(state_batch, action_batch)
         computed_image = computed_next_state[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy()
         state_image = state_batch[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy()
         next_state_image = next_state_batch[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy()
@@ -77,25 +77,33 @@ def plot(agent, epoch, episode, ep_reward, ep_loss, num_steps):
     ax1.scatter(((epoch-1) * 100) + episode, ep_reward, color="blue")
     rewards.append(ep_reward)
 
-    ax2.set_title('Loss Over Episodes')
+    state_loss, reward_loss = ep_loss
+    ax2.set_title('State Loss Over Episodes')
     ax2.set_xlabel('Episodes')
     ax2.set_ylabel('Loss')
-    ax2.scatter(((epoch-1) * 100) + episode, ep_loss, color="red")
-    loss.append(ep_loss)
+    ax2.scatter(((epoch-1) * 100) + episode, state_loss, color="red", label="state_loss")
+    state_losses.append(state_loss)
 
-    ax3.set_title('Duration Over Episodes')
-    ax3.set_ylabel('Duration')
+    ax3.set_title('Reward Loss Over Episodes')
     ax3.set_xlabel('Episodes')
-    ax3.scatter(((epoch-1) * 100) + episode, num_steps, color="orange")
+    ax3.set_ylabel('Loss')
+    ax3.scatter(((epoch-1) * 100) + episode, reward_loss, color="red", label="reward_loss")
+    reward_losses.append(reward_loss)
+
+    ax4.set_title('Duration Over Episodes')
+    ax4.set_ylabel('Duration')
+    ax4.set_xlabel('Episodes')
+    ax4.scatter(((epoch-1) * 100) + episode, num_steps, color="orange")
     num_steps_acc.append(num_steps)
 
     fig1.savefig("results/plt1.png")
     fig2.savefig("results/plt2.png")
     fig3.savefig("results/plt3.png")
+    fig4.savefig("results/plt4.png")
 
 
 # print(model.get_screen().shape)
-
+'''
 model.load("results_baseline/world_model_weights_5_100.pth")
 agent = HumanAgent()
 
@@ -131,5 +139,5 @@ for i in range(100):
 
 env.close()
 plt.close()
-
-# model.train(render=True, callbacks=[log, save, plot, print_screen])  # [log, save, plot])
+'''
+model.train(render=True, callbacks=[log, save, plot, print_screen])  # [log, save, plot])

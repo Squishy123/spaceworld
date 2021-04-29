@@ -29,6 +29,14 @@ class Transform_Autoencoder(nn.Module):
             ('bottleneck_relu1', nn.ReLU()),
         ]))
 
+        self.reward_predictor = nn.Sequential(OrderedDict([
+            ('reward_conv1', nn.Conv2d(64, 1, kernel_size=(1, 1))),
+            ('reward_relu1', nn.LeakyReLU()),
+            ('reward_flat1', nn.Flatten()),
+            ('reward_linear1', nn.Linear(100, 1)),
+            ('reward_relu2', nn.LeakyReLU()),
+        ]))
+
         self.decoder = nn.Sequential(OrderedDict([
             ('decoder_Tconv1', nn.ConvTranspose2d(64, 32, kernel_size=7)),
             ('decoder_relu1', nn.ReLU()),
@@ -46,8 +54,10 @@ class Transform_Autoencoder(nn.Module):
         # print(transforms.shape)
         x = torch.cat((x, transforms), 1)
         # print(x.shape)
-        x = self.bottleneck(x)
+        x1 = self.bottleneck(x)
+        x2 = x1.clone()
+        x2 = self.reward_predictor(x2)
+        # print(x2.shape)
+        x1 = self.decoder(x1)
         # print(x.shape)
-        x = self.decoder(x)
-        # print(x.shape)
-        return x
+        return x1, x2
