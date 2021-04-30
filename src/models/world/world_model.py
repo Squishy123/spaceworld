@@ -14,6 +14,7 @@ from collections import deque
 World Model Class
 '''
 
+
 class World_Model():
     def __init__(self, env, agent, config):
         # set cuda
@@ -42,6 +43,7 @@ class World_Model():
 
         # model net
         self.model = Transform_Autoencoder(num_actions, frame_stacks=self.config["FRAME_STACK"])
+        self.model.to(self.device)
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])
 
@@ -83,10 +85,10 @@ class World_Model():
 
     def get_screen(self, mod=None):
         if mod == "start":
-            return torch.cat((torch.zeros(1, 1, 64, 64, device=self.device), torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1)
+            return torch.cat((torch.zeros(1, 1, 64, 64, device=self.device), torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1).to(self.device)
 
         if mod == "end":
-            return torch.cat((torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1)
+            return torch.cat((torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1).to(self.device)
 
         screen = self.env.render(mode='rgb_array')
         screen = screen.transpose((2, 0, 1))
@@ -159,15 +161,15 @@ class World_Model():
         return self.render()
 
     def render(self):
-        return np.clip(self.screen_stack[0].detach().index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy(), 0, 1)
+        return np.clip(self.screen_stack[0].detach().index_select(1, torch.tensor([0, 1, 2], device=self.device)).cpu().squeeze(0).permute(1, 2, 0).numpy(), 0, 1)
 
     def step(self, action):
         if type(action) is np.ndarray:
             step_action = torch.tensor([], device=self.device)
             for a in action:
-                step_action = torch.cat((step_action, torch.empty(1, 1, 10, 10, device=self.device).fill_(a)), dim=1)
+                step_action = torch.cat((step_action, torch.empty(1, 1, 10, 10, device=self.device).fill_(a)), dim=1).to(self.device)
         else:
-            step_action = torch.empty(1, 1, 10, 10, device=self.device).fill_(action)
+            step_action = torch.empty(1, 1, 10, 10, device=self.device).fill_(action).to(self.device)
 
         state_batch = torch.cat(tuple(self.screen_stack), dim=1).to(self.device)
 
