@@ -178,8 +178,7 @@ class World_Model():
         done = False
         if torch.sum(computed_next_state) == torch.tensor(0):
             done = True
-
-        self.screen_stack.append(self.get_screen())
+        self.screen_stack.extend(torch.split(computed_next_state, self.config["FRAME_STACK"], dim=1))
 
         return self.render(), computed_reward, done
 
