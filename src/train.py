@@ -32,12 +32,10 @@ def save(model, epoch, episode, ep_reward, ep_loss, num_steps):
         model.save(f"results/world_model_weights_{epoch}_{episode}.pth")
         np.savetxt("results/data.txt", np.array([rewards, num_steps_acc, state_losses, reward_losses]))
 
-
 fig1, (ax1) = plt.subplots(1, constrained_layout=True)
 fig2, (ax2) = plt.subplots(1, constrained_layout=True)
 fig3, (ax3) = plt.subplots(1, constrained_layout=True)
 fig4, (ax4) = plt.subplots(1, constrained_layout=True)
-
 
 def print_screen(agent, epoch, episode, ep_reward, ep_loss, num_steps):
     if episode % 10 == 0:
@@ -101,43 +99,4 @@ def plot(agent, epoch, episode, ep_reward, ep_loss, num_steps):
     fig3.savefig("results/plt3.png")
     fig4.savefig("results/plt4.png")
 
-
-# print(model.get_screen().shape)
-'''
-model.load("results_baseline/world_model_weights_5_100.pth")
-agent = HumanAgent()
-
-state = model.reset()
-reward = 0
-done = False
-
-fig5, (ax5) = plt.subplots(1, constrained_layout=True)
-ax5.set_title("Loss over Step")
-ax5.set_xlabel('Step')
-ax5.set_ylabel('Loss')
-for i in range(100):
-    # print(i)
-    action = agent.act(state, reward, done)
-    # print(action)
-    model.env.step(action)
-    env_state = model.env.render()
-    for _ in range(1):
-        model.step(action)
-    next_state = model.render()
-
-    # loss = torch.nn.functional.mse_loss(torch.tensor(state), torch.tensor(next_state))
-    # print(loss)
-    # ax5.scatter(i, loss.item(), color="red")
-
-    plt.imshow((model.render()))
-    plt.draw()
-    plt.pause(1e-1)
-
-    state = next_state
-
-    # fig5.savefig("results/test_loss.png")
-
-env.close()
-plt.close()
-'''
 model.train(render=True, callbacks=[log, save, plot, print_screen])  # [log, save, plot])

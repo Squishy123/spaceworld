@@ -14,9 +14,6 @@ from collections import deque
 World Model Class
 '''
 
-torch.set_default_tensor_type('torch.cuda.FloatTensor')
-
-
 class World_Model():
     def __init__(self, env, agent, config):
         # set cuda
@@ -62,7 +59,8 @@ class World_Model():
     # load model weights
 
     def load(self, path="world_model_weights.pth"):
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, map_location=self.device)
+
         # reinit
         self.__init__(self.env, self.agent, checkpoint['config'])
 
@@ -71,7 +69,7 @@ class World_Model():
         self.model.eval()
 
         # optimizer
-        self.optimizer.load_state_dict(checkpoint['optimizer'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         # self.state_optimizer.load_state_dict(checkpoint['state_optimizer_state_dict'])
         # self.reward_optimizer.load_state_dict(checkpoint['reward_optimizer_state_dict'])
 
