@@ -71,8 +71,9 @@ class World_Model():
         self.model.eval()
 
         # optimizer
-        self.state_optimizer.load_state_dict(checkpoint['state_optimizer_state_dict'])
-        self.reward_optimizer.load_state_dict(checkpoint['reward_optimizer_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer'])
+        # self.state_optimizer.load_state_dict(checkpoint['state_optimizer_state_dict'])
+        # self.reward_optimizer.load_state_dict(checkpoint['reward_optimizer_state_dict'])
 
     # save model weights
     def save(self, path="world_model_weights.pth"):
@@ -131,7 +132,7 @@ class World_Model():
         # self.state_optimizer.step()
         # self.state_optimizer.zero_grad()
 
-        reward_loss = torch.nn.functional.mse_loss(computed_reward, reward_batch)
+        reward_loss = torch.nn.functional.mse_loss(computed_reward.squeeze(1), reward_batch)
         # reward_loss.backward(retain_graph=True)
         (state_loss + reward_loss).backward()
 
@@ -226,7 +227,7 @@ class World_Model():
                             break
 
                     ep_reward += step_reward
-                    step_reward = torch.tensor([reward], device=self.device).float()
+                    step_reward = torch.tensor([step_reward], device=self.device).float()
 
                     # generate next state stack
                     screen_stack.append(self.get_screen())
