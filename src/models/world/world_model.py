@@ -155,7 +155,7 @@ class World_Model():
         for _ in range(20):
             init_state, reward, done, _ = self.env.step(0)
             self.screen_stack.append(self.get_screen())
-
+        self.env.close()
         return self.render()
 
     def render(self):

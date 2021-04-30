@@ -11,41 +11,58 @@ from gym import wrappers
 import gym
 import numpy as np
 
+import pygame
+from pygame.locals import *
+from PIL import Image, ImageTk
+import time
 
 env = gym.make('LunarLander-v2')
 agent = RandomAgent(env.action_space)
 model = World_Model(env, agent, base_config)
 
 model.load("results/world_model_weights_7_100.pth")
-agent = HumanAgent()
+#agent = HumanAgent()
 reward = 0
 state = model.reset()
+env.close()
 done = False
 
-for i in range(100):
-    # print(i)
+pygame.init()
+
+FramePerSec = pygame.time.Clock()
+ 
+displaysurface = pygame.display.set_mode((400, 400))
+pygame.display.set_caption("Simulated Environment")
+
+crashed = False
+
+def pilImageToSurface(pilImage):
+    return pygame.image.fromstring(
+        pilImage.tobytes(), pilImage.size, pilImage.mode).convert()
+
+while not crashed:
+    #print("RUNNING")
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            crashed = True
+
     action = agent.act(state, reward, done)
-    # print(action)
-    model.env.step(action)
-    env_state = model.env.render()
+
     reward = 0
     for _ in range(1):
         _, r, _ = model.step(action)
     reward+=r
     next_state = model.render()
-
-    # loss = torch.nn.functional.mse_loss(torch.tensor(state), torch.tensor(next_state))
-    # print(loss)
-    # ax5.scatter(i, loss.item(), color="red")
-
-    plt.imshow((model.render()))
-    plt.draw()
-    plt.pause(1e-1)
-
     state = next_state
 
-    # fig5.savefig("results/test_loss.png")
+    displaysurface.fill((0,0,0))
+    #img = Image.fromarray((model.render() * 255).astype(np.uint8)).resize((400, 400), Image.NEAREST)
+    img = pygame.image.load('results/plt1.png')
+    #displaysurface.blit(pilImageToSurface(img),(0,0))
+    displaysurface.blit(img,(0,0))
+    #displaysurface.blit(,(0,0))
 
-env.close()
-plt.close()
+    pygame.display.update()
+    FramePerSec.tick(60)
+
 
