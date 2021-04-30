@@ -11,8 +11,7 @@ from gym import wrappers
 import gym
 import numpy as np
 
-import pygame
-from pygame.locals import *
+import pyglet
 from PIL import Image, ImageTk
 import time
 
@@ -20,33 +19,26 @@ env = gym.make('LunarLander-v2')
 agent = RandomAgent(env.action_space)
 model = World_Model(env, agent, base_config)
 
-model.load("results/world_model_weights_7_100.pth")
-#agent = HumanAgent()
+model.load("results/world_model_weights_10_100.pth")
 reward = 0
 state = model.reset()
 env.close()
 done = False
 
-pygame.init()
+win = pyglet.window.Window(width=400, height=400)
+keys = pyglet.window.key.KeyStateHandler()
+win.push_handlers(keys)
+current_frame = pyglet.image.ImageData(400, 400, 'rgb', Image.fromarray((model.render() * 255).astype(np.uint8)).resize((400, 400), Image.NEAREST).tobytes())
 
-FramePerSec = pygame.time.Clock()
- 
-displaysurface = pygame.display.set_mode((400, 400))
-pygame.display.set_caption("Simulated Environment")
-
-crashed = False
-
-def pilImageToSurface(pilImage):
-    return pygame.image.fromstring(
-        pilImage.tobytes(), pilImage.size, pilImage.mode).convert()
-
-while not crashed:
-    #print("RUNNING")
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            crashed = True
-
-    action = agent.act(state, reward, done)
+def update(dt):
+    action = 0
+    if keys[pyglet.window.key.A]:
+        print("A")
+        action = 1
+    elif keys[pyglet.window.key.W]:
+        action = 2
+    elif keys[pyglet.window.key.W]:
+        action = 3
 
     reward = 0
     for _ in range(1):
@@ -55,14 +47,14 @@ while not crashed:
     next_state = model.render()
     state = next_state
 
-    displaysurface.fill((0,0,0))
-    #img = Image.fromarray((model.render() * 255).astype(np.uint8)).resize((400, 400), Image.NEAREST)
-    img = pygame.image.load('results/plt1.png')
-    #displaysurface.blit(pilImageToSurface(img),(0,0))
-    displaysurface.blit(img,(0,0))
-    #displaysurface.blit(,(0,0))
+    current_frame = pyglet.image.ImageData(400, 400, 'rgb', Image.fromarray((model.render() * 255).astype(np.uint8)).resize((400, 400), Image.NEAREST).tobytes())
 
-    pygame.display.update()
-    FramePerSec.tick(60)
+@win.event
+def on_draw():
+    win.clear()
+    current_frame.blit(0, 0)
+
+pyglet.clock.schedule_interval(update, 0.1)
+pyglet.app.run()
 
 
