@@ -48,12 +48,12 @@ class World_Model():
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])
 
         # optimizer for state prediction
-        #state_parameters_to_update = list(self.model.encoder.parameters()) + list(self.model.bottleneck.parameters()) + list(self.model.decoder.parameters())
-        #self.state_optimizer = torch.optim.Adam(state_parameters_to_update, lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])
+        # state_parameters_to_update = list(self.model.encoder.parameters()) + list(self.model.bottleneck.parameters()) + list(self.model.decoder.parameters())
+        # self.state_optimizer = torch.optim.Adam(state_parameters_to_update, lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])
 
         # optimizer for reward prediction
-        #reward_parameters_to_update = list(self.model.reward_predictor.parameters())
-        #self.reward_optimizer = torch.optim.Adam(reward_parameters_to_update, lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])
+        # reward_parameters_to_update = list(self.model.reward_predictor.parameters())
+        # self.reward_optimizer = torch.optim.Adam(reward_parameters_to_update, lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])
 
         # sim
         self.screen_stack = []
@@ -110,7 +110,7 @@ class World_Model():
             return 0, 0
 
         # sample from replaymemory
-        batch = self.replay_memory.sample(self.config['BATCH_SIZE'])
+        batch = self.replay_memory.sample(self.config['BATCH_SIZE'], False)
 
         state_batch = torch.cat(batch.state).to(self.device)
         action_batch = torch.cat(batch.action).to(self.device)
@@ -154,10 +154,10 @@ class World_Model():
         self.env.reset()
         init_state = self.get_screen(mod="start")
         self.screen_stack = deque([init_state] * self.config['FRAME_STACK'], maxlen=self.config['FRAME_STACK'])
-        for _ in range(20):
+        for _ in range(25):
             init_state, reward, done, _ = self.env.step(0)
             self.screen_stack.append(self.get_screen())
-        self.env.close()
+        # self.env.close()
         return self.render()
 
     def render(self):
@@ -231,7 +231,7 @@ class World_Model():
                     # generate next state stack
                     screen_stack.append(self.get_screen())
                     if done:
-                        screen_stack.append(self.config["FRAME_STACK"] * self.get_screen(mod="end"))
+                        screen_stack.extend(self.config["FRAME_STACK"] * [self.get_screen(mod="end")])
 
                     next_state = torch.cat(list(screen_stack), dim=1)
                     # print(next_state.shape)

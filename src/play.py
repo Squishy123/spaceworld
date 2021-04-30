@@ -69,19 +69,26 @@ model.load("results/world_model_weights_10_100.pth")
 state = model.reset()
 reward = 0
 done = False
-with imageio.get_writer("test_out.mp4", fps=2) as video:
-    for i in range(100):
-        # print(i)
-        action = agent.act(state, reward, done)
-        # print(action)
-        model.env.step(action)
-        env_state = model.env.render()
-        reward = 0
-        for _ in range(1):
-            _, reward, _ = model.step(action)
-        next_state = model.render()
+with imageio.get_writer("sim_out.mp4", fps=1) as sim_video:
+    with imageio.get_writer("env_out.mp4", fps=1) as env_video:
+        for i in range(300):
+            # print(i)
+            action = agent.act(state, reward, done)
+            # print(action)
+            _, _, env_done, _ = model.env.step(action)
+            if not env_done:
+                env_video.append_data(model.env.render(mode="rgb_array"))
+                if i % 1 == 0:
+                    model.screen_stack.extend(model.config["FRAME_STACK"] * [model.get_screen()])
 
-        video.append_data(model.render())
-        state = next_state
+            #env_state = model.env.render()
+            reward = 0
+            for _ in range(1):
+                _, reward, _ = model.step(action)
+            next_state = model.render()
+            # print(model.get_screen(mod="end").squeeze(0).squeeze(0).cpu().shape)
+            #video.append_data(model.get_screen(mod="end").squeeze(0).cpu().permute(1, 2, 0).numpy())
+            sim_video.append_data(model.render())
+            state = next_state
 
 env.close()
