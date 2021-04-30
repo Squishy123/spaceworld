@@ -32,7 +32,7 @@ agent = RandomAgent(env.action_space)
 model = World_Model(env, agent, base_config)
 model.load("results/world_model_weights_10_100.pth")
 # agent = HumanAgent()
-for b in range(1,11):
+for b in range(1, 101, 10):
     model.env.reset()
     state = model.reset()
     reward = 0
@@ -41,7 +41,7 @@ for b in range(1,11):
     with imageio.get_writer(f"decay_test/boosted_{b}_out.mp4", fps=10) as video:
         for i in range(300):
             base = Image.new('RGB', (1280, 720))
-            
+        
             # print(i)
             action = agent.act(state, reward, done)
             # print(action)
@@ -70,7 +70,7 @@ for b in range(1,11):
 
             # draw final frames
             if env_done:
-                for _ in range(5):
+                for _ in range(100):
                     _, reward, _ = model.step(action)
                     
                     base = Image.new('RGB', (1280, 720))
