@@ -63,7 +63,7 @@ def on_draw():
 pyglet.clock.schedule_interval(update, 0.1)
 pyglet.app.run()
 '''
-model.load("results_baseline/world_model_weights_10_100.pth")
+model.load("results/world_model_weights_10_100.pth")
 # agent = HumanAgent()
 
 state = model.reset()
