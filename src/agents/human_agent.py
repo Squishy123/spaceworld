@@ -1,13 +1,32 @@
+from pynput.keyboard import Listener, Key
 # 1234 for lunarlander
+class HumanAgent():
 
-class HumanAgent(object):
+    def __init__(self):
+        self.default_action = 0
+        self.selected_action = 0
+
+        listener = Listener(
+            on_press=self.on_press,
+
+        )
+        listener.start()
 
     def act(self, observation, reward, done):
-        action = input("wasd:")
-        if action == "w":
-            return 2
-        if action == "a":
-            return 1
-        if action == "d":
-            return 3
-        return 0
+        print(f"REWARD: {reward}")
+        
+        if self.selected_action != 0:
+            temp = self.selected_action
+            self.selected_action = 0
+            return temp
+        
+        return self.default_action
+
+    def on_press(self, key):
+        if key == Key.w:
+            self.selected_action = 2
+        elif key == Key.a:
+            self.selected_action = 1
+        elif key == Key.d:
+            self.selected_action = 3
+        
