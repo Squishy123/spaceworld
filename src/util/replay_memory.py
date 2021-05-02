@@ -15,4 +15,5 @@ class ReplayMemory(deque):
     def sample(self, batch_size, random_sample=True):
         if random_sample:
             return Transition(*zip(*random.sample(self, batch_size)))
-        return Transition(*zip(*list(self)[-batch_size:]))
+        i = random.randint(0, len(self) - batch_size)
+        return Transition(*zip(*list(self)[i: i+batch_size]))

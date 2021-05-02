@@ -14,8 +14,6 @@ from collections import deque
 World Model Class
 '''
 
-torch.set_default_tensor_type('torch.cuda.FloatTensor')
-
 
 class World_Model():
     def __init__(self, env, agent, config):
@@ -45,13 +43,17 @@ class World_Model():
 
         # model net
         self.model = Transform_Autoencoder(num_actions, frame_stacks=self.config["FRAME_STACK"])
+        self.model.to(self.device)
 
-        # optimizer
-        parameters_to_update = []
-        for p in self.model.parameters():
-            if p.requires_grad == True:
-                parameters_to_update.append(p)
-        self.optimizer = torch.optim.Adam(parameters_to_update, lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])
+
+        # optimizer for state prediction
+        # state_parameters_to_update = list(self.model.encoder.parameters()) + list(self.model.bottleneck.parameters()) + list(self.model.decoder.parameters())
+        # self.state_optimizer = torch.optim.Adam(state_parameters_to_update, lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])
+
+        # optimizer for reward prediction
+        # reward_parameters_to_update = list(self.model.reward_predictor.parameters())
+        # self.reward_optimizer = torch.optim.Adam(reward_parameters_to_update, lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])
 
         # sim
         self.screen_stack = []
@@ -59,7 +61,8 @@ class World_Model():
     # load model weights
 
     def load(self, path="world_model_weights.pth"):
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, map_location=self.device)
+
         # reinit
         self.__init__(self.env, self.agent, checkpoint['config'])
 
@@ -69,6 +72,8 @@ class World_Model():
 
         # optimizer
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        # self.state_optimizer.load_state_dict(checkpoint['state_optimizer_state_dict'])
+        # self.reward_optimizer.load_state_dict(checkpoint['reward_optimizer_state_dict'])
 
     # save model weights
     def save(self, path="world_model_weights.pth"):
@@ -80,10 +85,10 @@ class World_Model():
 
     def get_screen(self, mod=None):
         if mod == "start":
-            return torch.cat((torch.zeros(1, 1, 64, 64, device=self.device), torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1)
+            return torch.cat((torch.zeros(1, 1, 64, 64, device=self.device), torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1).to(self.device)
 
         if mod == "end":
-            return torch.cat((torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1)
+            return torch.cat((torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1).to(self.device)
 
         screen = self.env.render(mode='rgb_array')
         screen = screen.transpose((2, 0, 1))
@@ -102,17 +107,17 @@ class World_Model():
     # optimize model
     def learn(self):
         if len(self.replay_memory) < self.config['BATCH_SIZE']:
-            return 0
+            return 0, 0
 
         # sample from replaymemory
-        batch = self.replay_memory.sample(self.config['BATCH_SIZE'])
+        batch = self.replay_memory.sample(self.config['BATCH_SIZE'], False)
 
         state_batch = torch.cat(batch.state).to(self.device)
         action_batch = torch.cat(batch.action).to(self.device)
         reward_batch = torch.cat(batch.reward).to(self.device)
         next_state_batch = torch.cat(batch.next_state).to(self.device)
 
-        computed_next_state = self.model(state_batch, action_batch)
+        computed_next_state, computed_reward = self.model(state_batch, action_batch)
         # print(computed_next_state[0].unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().shape)
         # plt.imshow(computed_next_state[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy(), interpolation='none')
         # plt.draw()
@@ -120,52 +125,62 @@ class World_Model():
 
         # calc_loss = torch.nn.functional.mse_loss(state_batch, next_state_batch)
         # print(calc_loss.item())
+        torch.autograd.set_detect_anomaly(True)
+        state_loss = torch.nn.functional.mse_loss(computed_next_state, next_state_batch)
+        # state_loss.backward(retain_graph=True)
 
-        loss = torch.nn.functional.mse_loss(computed_next_state, next_state_batch)
+        # self.state_optimizer.step()
+        # self.state_optimizer.zero_grad()
 
-        self.optimizer.zero_grad()
-        loss.backward()
+        reward_loss = torch.nn.functional.mse_loss(computed_reward.squeeze(1), reward_batch)
+        # reward_loss.backward(retain_graph=True)
+        (state_loss + reward_loss).backward()
 
         for param in self.model.parameters():
             if param.grad != None:
                 param.grad.data.clamp_(-1, 1)
 
         self.optimizer.step()
+        self.optimizer.zero_grad()
 
-        return loss.item()  # calc_loss.item()
+        # self.reward_optimizer.step()
+        # self.reward_optimizer.zero_grad()
+
+       # torch.autograd.backward(reward_loss, state_loss)
+
+        return state_loss.item(), reward_loss.item()  # calc_loss.item()
 
     def reset(self):
         self.env.reset()
         init_state = self.get_screen(mod="start")
         self.screen_stack = deque([init_state] * self.config['FRAME_STACK'], maxlen=self.config['FRAME_STACK'])
-        for _ in range(20):
+        for _ in range(10):
             init_state, reward, done, _ = self.env.step(0)
             self.screen_stack.append(self.get_screen())
-
+        # self.env.close()
         return self.render()
 
     def render(self):
-        return np.clip(self.screen_stack[0].detach().index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy(), 0, 1)
+        return np.clip(self.screen_stack[0].detach().index_select(1, torch.tensor([0, 1, 2], device=self.device)).cpu().squeeze(0).permute(1, 2, 0).numpy(), 0, 1)
 
     def step(self, action):
         if type(action) is np.ndarray:
             step_action = torch.tensor([], device=self.device)
             for a in action:
-                step_action = torch.cat((step_action, torch.empty(1, 1, 10, 10, device=self.device).fill_(a)), dim=1)
+                step_action = torch.cat((step_action, torch.empty(1, 1, 10, 10, device=self.device).fill_(a)), dim=1).to(self.device)
         else:
-            step_action = torch.empty(1, 1, 10, 10, device=self.device).fill_(action)
+            step_action = torch.empty(1, 1, 10, 10, device=self.device).fill_(action).to(self.device)
 
         state_batch = torch.cat(tuple(self.screen_stack), dim=1).to(self.device)
 
         # calculate next state
-        computed_next_state = self.model(state_batch, step_action)
+        computed_next_state, computed_reward = self.model(state_batch, step_action)
         done = False
         if torch.sum(computed_next_state) == torch.tensor(0):
             done = True
+        self.screen_stack.extend(torch.split(computed_next_state, self.config["FRAME_STACK"], dim=1))
 
-        self.screen_stack.append(self.get_screen())
-
-        return self.render(), 0, done
+        return self.render(), computed_reward, done
 
     def no_update_step(self,action):
         if type(action) is np.ndarray:
@@ -204,7 +219,8 @@ class World_Model():
 
                 ep_reward = 0
                 num_steps = 0
-                ep_loss = 0
+                ep_state_loss = 0
+                ep_reward_loss = 0
 
                 negative_reward_count = 0
 
@@ -231,12 +247,12 @@ class World_Model():
                             break
 
                     ep_reward += step_reward
-                    step_reward = torch.tensor([reward], device=self.device)
+                    step_reward = torch.tensor([step_reward], device=self.device).float()
 
                     # generate next state stack
                     screen_stack.append(self.get_screen())
                     if done:
-                        screen_stack.append(self.config["FRAME_STACK"] * [self.get_screen(mod="end")])
+                        screen_stack.extend(self.config["FRAME_STACK"] * [self.get_screen(mod="end")])
 
                     next_state = torch.cat(list(screen_stack), dim=1)
                     # print(next_state.shape)
@@ -251,11 +267,13 @@ class World_Model():
                         else:
                             negative_reward_count = 0
 
-                    ep_loss += self.learn()
+                    state_loss, reward_loss = self.learn()
+                    ep_state_loss += state_loss
+                    ep_reward_loss += reward_loss
 
                     if done:
                         break
 
                 # run callbacks
                 for c in callbacks:
-                    c(self, epoch, episode, ep_reward, ep_loss, num_steps)
+                    c(self, epoch, episode, ep_reward, (ep_state_loss, ep_reward_loss), num_steps)
