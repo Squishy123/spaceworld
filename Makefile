@@ -4,3 +4,17 @@ install_sys:
 install_dep:
 	pip install -r requirements.txt
 
+start_board:
+	mkdir -p runs && tensorboard --logdir=runs&
+
+stop_board:
+	sudo pkill tensorboard
+
+train:
+	mkdir -p results && python src/train.py
+
+play:
+	python src/play.py
+
+decay_test:
+	mkdir -p decay_test && python src/decay_test.py

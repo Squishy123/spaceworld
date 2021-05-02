@@ -19,7 +19,22 @@ make install_dep
 ```
 
 # Running the Project
-## Run the Main Script to start training an agent
+## 1. Start TensorBoard
+``` 
+make start_board
 ```
-python src/main.py
+
+## 2a. Run the Training Script
+```
+make train
+```
+
+## 2b. Run the Play Script
+```
+make play
+```
+
+## 3. Close TensorBoard
+```
+make stop_board
 ```
