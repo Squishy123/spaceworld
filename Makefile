@@ -5,7 +5,7 @@ install_dep:
 	pip install -r requirements.txt
 
 start_board:
-	mkdir -p runs && tensorboard --logdir=runs&
+	mkdir -p results/runs && tensorboard --logdir=results/runs&
 
 stop_board:
 	sudo pkill tensorboard
