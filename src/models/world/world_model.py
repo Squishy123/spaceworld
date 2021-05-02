@@ -182,7 +182,7 @@ class World_Model():
 
         return self.render(), computed_reward, done
 
-    def no_update_step(self,action):
+    def no_update_step(self, action):
         if type(action) is np.ndarray:
             step_action = torch.tensor([], device=self.device)
             for a in action:
@@ -198,14 +198,17 @@ class World_Model():
         if torch.sum(computed_next_state) == torch.tensor(0):
             done = True
 
-        #self.screen_stack.append(self.get_screen())
+        # self.screen_stack.append(self.get_screen())
 
         return self.render(), 0, done
-
 
     # training cycle
 
     def train(self, callbacks=[], render=False):
+        # init callbacks
+        for c in callbacks:
+            c.init()
+
         for epoch in range(1, self.config["NUMBER_OF_EPOCHS"] + 1):
             for episode in range(1, self.config["EPISODES_PER_EPOCH"] + 1):
                 # reset env
@@ -276,4 +279,8 @@ class World_Model():
 
                 # run callbacks
                 for c in callbacks:
-                    c(self, epoch, episode, ep_reward, (ep_state_loss, ep_reward_loss), num_steps)
+                    c.callback(self, epoch, episode, ep_reward, (ep_state_loss, ep_reward_loss), num_steps)
+
+        # close callbacks
+        for c in callbacks:
+            c.close()
