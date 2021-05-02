@@ -16,4 +16,5 @@ env = gym.make('LunarLander-v2')
 agent = RandomAgent(env.action_space)
 model = World_Model(env, agent, base_config)
 
-model.train(render=True, callbacks=[log.default, tensorboard.plot_loss, tensorboard.plot_prediction])  # [log.default, save.save_model, plot.plot_general, plot.display_state])
+model.train(render=True, callbacks=[log.default, save.save_model, plot.plot_general, plot.plot_state, tensorboard.plot_loss,
+            tensorboard.plot_prediction])  # [log.default, save.save_model, plot.plot_general, plot.display_state])

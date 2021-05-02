@@ -34,6 +34,9 @@ plot_loss = Callback(
 
 def pred_cb(self):
     def write_state(agent, epoch, episode, ep_reward, ep_loss, num_steps):
+        if episode % 10 != 0:
+            return
+
         batch = agent.replay_memory.sample(1)
 
         state_batch = torch.cat(batch.state).to(agent.device)

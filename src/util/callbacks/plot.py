@@ -1,4 +1,8 @@
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+
+from .callback import Callback
 
 fig1, (ax1) = plt.subplots(1, constrained_layout=True)
 fig2, (ax2) = plt.subplots(1, constrained_layout=True)
@@ -34,6 +38,9 @@ def plot_general(agent, epoch, episode, ep_reward, ep_loss, num_steps):
     fig4.savefig("results/plt4.png")
 
 
+plot_general = Callback(lambda self: plot_general)
+
+
 def display_state(agent, epoch, episode, ep_reward, ep_loss, num_steps):
     if episode % 10 == 0:
         batch = agent.replay_memory.sample(1)
@@ -44,9 +51,9 @@ def display_state(agent, epoch, episode, ep_reward, ep_loss, num_steps):
         next_state_batch = torch.cat(batch.next_state).to(agent.device)
 
         computed_next_state, computed_reward = agent.model(state_batch, action_batch)
-        computed_image = computed_next_state[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2], device=agent.device)).cpu().squeeze(0).permute(1, 2, 0).numpy()
-        state_image = state_batch[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2], device=agent.device)).cpu().squeeze(0).permute(1, 2, 0).numpy()
-        next_state_image = next_state_batch[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2], device=agent.device)).cpu().squeeze(0).permute(1, 2, 0).numpy()
+        computed_image = computed_next_state[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2], device=agent.device)).squeeze(0).permute(1, 2, 0).cpu().numpy()
+        state_image = state_batch[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2], device=agent.device)).squeeze(0).permute(1, 2, 0).cpu().numpy()
+        next_state_image = next_state_batch[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2], device=agent.device)).squeeze(0).permute(1, 2, 0).cpu().numpy()
 
         fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
         ax1.imshow(np.clip(state_image, 0, 1))
@@ -74,3 +81,6 @@ def display_state(agent, epoch, episode, ep_reward, ep_loss, num_steps):
         ax1.text(160, 110, "{:.2f}".format(reward_batch[0].item()), fontsize=10)
 
         plt.savefig(f"results/print_screen_{epoch}_{episode}.png")
+
+
+plot_state = Callback(lambda self: display_state)
