@@ -21,8 +21,8 @@ def loss_cb(self):
     def write_loss(agent, epoch, episode, ep_reward, ep_loss, num_steps):
         state_loss, reward_loss = ep_loss
 
-        self.writer.add_scalars("Loss/State_Predictor", {f'{v}': k for v, k in enumerate(state_loss)}, ((epoch-1) * 100) + episode)
-        self.writer.add_scalars("Loss/Reward_Predictor", {f'{v}': k for v, k in enumerate(reward_loss)}, ((epoch-1) * 100) + episode)
+        self.writer.add_scalars("Loss/State_Predictor", {f'{v} Concurrent Frames': k for v, k in enumerate(state_loss)}, ((epoch-1) * 100) + episode)
+        self.writer.add_scalars("Loss/Reward_Predictor", {f'{v} Concurrent Frames': k for v, k in enumerate(reward_loss)}, ((epoch-1) * 100) + episode)
 
     return write_loss
 

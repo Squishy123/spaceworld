@@ -5,7 +5,7 @@ config = {
     "NUMBER_OF_EPOCHS": 5,  # for training
     "FRAME_SKIP": 1,  # number of frames to skip per action
     "FRAME_STACK": 3,  # number of frames to stack
-    "FRAME_DENOISE_SIZE": 2,  # number of frames to pass back into the model and optimize
+    "FRAME_DENOISE_SIZE": 3,  # number of frames to pass back into the model and optimize
     "LEARNING_RATE": 1e-3,  # alpha learning
     "WEIGHT_DECAY": 1e-5,  # optimizer weight decay
 }

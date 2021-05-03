@@ -28,7 +28,7 @@ def save_cb(self):
         if episode % 10 == 0:
             print("SAVING MODEL")
             model.save(f"results/world_model_weights_{epoch}_{episode}.pth")
-            np.savetxt("results/data.txt", np.array([self.rewards, self.num_steps_acc, self.state_losses, self.reward_losses]))
+            np.save("results/data", np.array([self.rewards, self.num_steps_acc, self.state_losses, self.reward_losses], dtype=object))
 
     return save_model
 
