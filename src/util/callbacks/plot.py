@@ -44,7 +44,7 @@ plot_general = Callback(lambda self: plot_general)
 
 
 def display_state(agent, epoch, episode, ep_reward, ep_loss, num_steps):
-    if episode % 10 == 0:
+    if episode % 5 == 0:
         batch = agent.replay_memory.sample(1)
 
         state_batch = torch.cat(batch.state).to(agent.device)

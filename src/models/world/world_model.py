@@ -84,11 +84,11 @@ class World_Model():
         }, path)
 
     def get_screen(self, mod=None):
-        if mod == "start":
-            return torch.cat((torch.zeros(1, 1, 64, 64, device=self.device), torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1).to(self.device)
+        # if mod == "start":
+        #    return torch.cat((torch.zeros(1, 1, 64, 64, device=self.device), torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1).to(self.device)
 
-        if mod == "end":
-            return torch.cat((torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1).to(self.device)
+        # if mod == "end":
+        #    return torch.cat((torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1).to(self.device)
 
         screen = self.env.render(mode='rgb_array')
         screen = screen.transpose((2, 0, 1))
@@ -150,10 +150,10 @@ class World_Model():
         self.env.reset()
         init_state = self.get_screen(mod="start")
         self.screen_stack = deque([init_state] * self.config['FRAME_STACK'], maxlen=self.config['FRAME_STACK'])
-        for _ in range(10):
+        for _ in range(30):
             init_state, reward, done, _ = self.env.step(0)
             self.screen_stack.append(self.get_screen())
-        # self.env.close()
+        self.env.close()
         return self.render()
 
     def render(self):
@@ -176,7 +176,7 @@ class World_Model():
             done = True
         self.screen_stack.extend(torch.split(computed_next_state, self.config["FRAME_STACK"], dim=1))
 
-        return self.render(), computed_reward, done
+        return self.render(), computed_reward, done, None
 
     def no_update_step(self, action):
         if type(action) is np.ndarray:

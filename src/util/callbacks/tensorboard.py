@@ -35,7 +35,7 @@ plot_loss = Callback(
 
 def pred_cb(self):
     def write_state(agent, epoch, episode, ep_reward, ep_loss, num_steps):
-        if episode % 10 != 0:
+        if episode % 5 != 0:
             return
 
         batch = agent.replay_memory.sample(1)
@@ -93,5 +93,23 @@ def pred_cb(self):
 
 plot_prediction = Callback(
     pred_cb,
+    board_context
+)
+
+
+def cuda_cb(self):
+    def plot_cuda(agent, epoch, episode, ep_reward, ep_loss, num_steps):
+        t = torch.cuda.get_device_properties(0).total_memory
+        r = torch.cuda.memory_reserved(0)
+        a = torch.cuda.memory_allocated(0)
+        f = r-a
+
+        self.writer.add_scalar("CUDA Memory Free %", f/t, ((epoch-1) * 100) + episode)
+
+    return plot_cuda
+
+
+plot_cuda = Callback(
+    cuda_cb,
     board_context
 )
