@@ -1,5 +1,7 @@
 # spaceworld
-World-Based Model Learning using LunarLander-v2
+## World-Based Model Learning using LunarLander-v2
+
+<img src="screen_pred.png">
 
 
 # Installation
