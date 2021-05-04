@@ -276,7 +276,7 @@ class World_Model():
 
                 # run callbacks
                 for c in callbacks:
-                    c.callback(self, epoch, episode, ep_reward, (ep_state_loss, ep_reward_loss), num_steps)
+                    c.callback(self, epoch, episode, ep_reward, (ep_state_loss/num_steps, ep_reward_loss/num_steps), num_steps)
 
         # close callbacks
         for c in callbacks:
