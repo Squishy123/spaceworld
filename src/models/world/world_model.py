@@ -150,10 +150,12 @@ class World_Model():
         self.env.reset()
         init_state = self.get_screen(mod="start")
         self.screen_stack = deque([init_state] * self.config['FRAME_STACK'], maxlen=self.config['FRAME_STACK'])
+        '''
         for _ in range(30):
             init_state, reward, done, _ = self.env.step(0)
             self.screen_stack.append(self.get_screen())
         self.env.close()
+        '''
         return self.render()
 
     def render(self):
@@ -176,27 +178,25 @@ class World_Model():
             done = True
         self.screen_stack.extend(torch.split(computed_next_state, self.config["FRAME_STACK"], dim=1))
 
-        return self.render(), computed_reward, done, None
+        return self.render(), computed_reward.item(), done, None
 
-    def no_update_step(self, action):
+    def no_update_step(self, screen_stack, action):
         if type(action) is np.ndarray:
             step_action = torch.tensor([], device=self.device)
             for a in action:
-                step_action = torch.cat((step_action, torch.empty(1, 1, 10, 10, device=self.device).fill_(a)), dim=1)
+                step_action = torch.cat((step_action, torch.empty(1, 1, 10, 10, device=self.device).fill_(a)), dim=1).to(self.device)
         else:
-            step_action = torch.empty(1, 1, 10, 10, device=self.device).fill_(action)
+            step_action = torch.empty(1, 1, 10, 10, device=self.device).fill_(action).to(self.device)
 
-        state_batch = torch.cat(tuple(self.screen_stack), dim=1).to(self.device)
+        state_batch = torch.cat(tuple(screen_stack), dim=1).to(self.device)
 
         # calculate next state
-        computed_next_state = self.model(state_batch, step_action)
+        computed_next_state, computed_reward = self.model(state_batch, step_action)
         done = False
         if torch.sum(computed_next_state) == torch.tensor(0):
             done = True
-
-        # self.screen_stack.append(self.get_screen())
-
-        return self.render(), 0, done
+        #self.screen_stack.extend(torch.split(computed_next_state, self.config["FRAME_STACK"], dim=1))
+        return self.render(), computed_reward.item(), done, None
 
     # training cycle
 
