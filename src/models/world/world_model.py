@@ -1,4 +1,5 @@
-from .transform_autoencoder import Transform_Autoencoder
+#from .networks.base_predictor import BasePredictor
+from .networks.rnn_predictor import RNNPredictor
 from util.replay_memory import ReplayMemory
 
 import torch
@@ -42,7 +43,7 @@ class World_Model():
         self.replay_memory = ReplayMemory(self.config['MEMORY_CAPACITY'])
 
         # model net
-        self.model = Transform_Autoencoder(num_actions, frame_stacks=self.config["FRAME_STACK"])
+        self.model = RNNPredictor(num_actions, frame_stacks=self.config["FRAME_STACK"])
         self.model.to(self.device)
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config['LEARNING_RATE'], weight_decay=self.config['WEIGHT_DECAY'])

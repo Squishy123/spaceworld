@@ -3,6 +3,8 @@ import torch.nn as nn
 
 from collections import OrderedDict
 
+from .conv_lstm import ConvLSTM
+
 '''
 Transform_Autoencoder Class
 
@@ -10,10 +12,10 @@ Train an autoencoder that accepts additional image transformative inputs
 '''
 
 
-class Transform_Autoencoder(nn.Module):
+class RNNPredictor(nn.Module):
     # accepts input for number of transforms
     def __init__(self, num_transforms=0, frame_stacks=1):
-        super(Transform_Autoencoder, self).__init__()
+        super(RNNPredictor, self).__init__()
 
         self.encoder = nn.Sequential(OrderedDict([
             ('encoder_conv1', nn.Conv2d(3 * frame_stacks, 16, kernel_size=3, stride=2, padding=1)),
@@ -29,8 +31,12 @@ class Transform_Autoencoder(nn.Module):
             ('bottleneck_relu1', nn.ReLU()),
         ]))
 
+        self.lstm = nn.Sequential(OrderedDict([
+            ('conv_lstm1', ConvLSTM(64, [64, 64, 128], kernel_size=(1, 1), num_layers=3))
+        ]))
+
         self.reward_predictor = nn.Sequential(OrderedDict([
-            ('reward_conv1', nn.Conv2d(64, 16, kernel_size=7)),
+            ('reward_conv1', nn.Conv2d(128, 16, kernel_size=7)),
             ('reward_relu1', nn.ReLU()),
             ('reward_flat1', nn.Flatten()),
             ('reward_linear1', nn.Linear(256, 64)),
@@ -40,7 +46,7 @@ class Transform_Autoencoder(nn.Module):
         ]))
 
         self.decoder = nn.Sequential(OrderedDict([
-            ('decoder_Tconv1', nn.ConvTranspose2d(64, 32, kernel_size=7)),
+            ('decoder_Tconv1', nn.ConvTranspose2d(128, 32, kernel_size=7)),
             ('decoder_relu1', nn.ReLU()),
             ('decoder_Tconv2', nn.ConvTranspose2d(32, 16, kernel_size=3, stride=2, padding=1, output_padding=1)),
             ('decoder_relu2', nn.ReLU()),
@@ -56,7 +62,12 @@ class Transform_Autoencoder(nn.Module):
         # print(transforms.shape)
         x = torch.cat((x, transforms), 1)
         # print(x.shape)
-        x1 = self.bottleneck(x)
+        x = self.bottleneck(x)
+        # print(x.shape)
+        x_layers, x_last = self.lstm(x.unsqueeze(0))
+        x1 = x_last[-1][-1]
+        # print(x_last[-1].shape)
+
         x2 = x1.detach()
         x2 = self.reward_predictor(x2)
         # print(x2.shape)
