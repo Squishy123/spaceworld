@@ -84,11 +84,11 @@ class World_Model():
         }, path)
 
     def get_screen(self, mod=None):
-        if mod == "start":
-            return torch.cat((torch.zeros(1, 1, 64, 64, device=self.device), torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1).to(self.device)
+        # if mod == "start":
+        #    return torch.cat((torch.zeros(1, 1, 64, 64, device=self.device), torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1).to(self.device)
 
-        if mod == "end":
-            return torch.cat((torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1).to(self.device)
+        # if mod == "end":
+        #    return torch.cat((torch.ones(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device), torch.zeros(1, 1, 64, 64, device=self.device)), dim=1).to(self.device)
 
         screen = self.env.render(mode='rgb_array')
         screen = screen.transpose((2, 0, 1))
@@ -106,8 +106,11 @@ class World_Model():
 
     # optimize model
     def learn(self):
+        total_state_loss = np.zeros(self.config["FRAME_DENOISE_SIZE"])
+        total_reward_loss = np.zeros(self.config["FRAME_DENOISE_SIZE"])
+
         if len(self.replay_memory) < self.config['BATCH_SIZE']:
-            return 0, 0
+            return total_state_loss, total_reward_loss
 
         # sample from replaymemory
         batch = self.replay_memory.sample(self.config['BATCH_SIZE'], False)
@@ -117,24 +120,22 @@ class World_Model():
         reward_batch = torch.cat(batch.reward).to(self.device)
         next_state_batch = torch.cat(batch.next_state).to(self.device)
 
-        computed_next_state, computed_reward = self.model(state_batch, action_batch)
-        # print(computed_next_state[0].unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().shape)
-        # plt.imshow(computed_next_state[0].detach().unsqueeze(0).index_select(1, torch.tensor([0, 1, 2])).cpu().squeeze(0).permute(1, 2, 0).numpy(), interpolation='none')
-        # plt.draw()
-        # plt.pause(1e-3)
+        total_loss = 0
 
-        # calc_loss = torch.nn.functional.mse_loss(state_batch, next_state_batch)
-        # print(calc_loss.item())
-        torch.autograd.set_detect_anomaly(True)
-        state_loss = torch.nn.functional.mse_loss(computed_next_state, next_state_batch)
-        # state_loss.backward(retain_graph=True)
+        for i in range(self.config["FRAME_DENOISE_SIZE"]):
+            if i == 0:
+                computed_next_state, computed_reward = self.model(state_batch, action_batch)
+            else:
+                computed_next_state, computed_reward = self.model(computed_next_state[0:self.config['BATCH_SIZE']-i], action_batch[i:self.config['BATCH_SIZE']])
+            state_loss = torch.nn.functional.mse_loss(computed_next_state, next_state_batch[i:self.config['BATCH_SIZE']])
+            reward_loss = torch.nn.functional.mse_loss(computed_reward.squeeze(1), reward_batch[i:self.config['BATCH_SIZE']])
 
-        # self.state_optimizer.step()
-        # self.state_optimizer.zero_grad()
+            total_state_loss[i] = state_loss.item()
+            total_reward_loss[i] = reward_loss.item()
 
-        reward_loss = torch.nn.functional.mse_loss(computed_reward.squeeze(1), reward_batch)
-        # reward_loss.backward(retain_graph=True)
-        (state_loss + reward_loss).backward()
+            total_loss += state_loss + reward_loss
+
+        total_loss.backward()
 
         for param in self.model.parameters():
             if param.grad != None:
@@ -143,21 +144,16 @@ class World_Model():
         self.optimizer.step()
         self.optimizer.zero_grad()
 
-        # self.reward_optimizer.step()
-        # self.reward_optimizer.zero_grad()
-
-       # torch.autograd.backward(reward_loss, state_loss)
-
-        return state_loss.item(), reward_loss.item()  # calc_loss.item()
+        return total_state_loss, total_reward_loss
 
     def reset(self):
         self.env.reset()
         init_state = self.get_screen(mod="start")
         self.screen_stack = deque([init_state] * self.config['FRAME_STACK'], maxlen=self.config['FRAME_STACK'])
-        for _ in range(10):
+        for _ in range(30):
             init_state, reward, done, _ = self.env.step(0)
             self.screen_stack.append(self.get_screen())
-        # self.env.close()
+        self.env.close()
         return self.render()
 
     def render(self):
@@ -180,7 +176,7 @@ class World_Model():
             done = True
         self.screen_stack.extend(torch.split(computed_next_state, self.config["FRAME_STACK"], dim=1))
 
-        return self.render(), computed_reward, done
+        return self.render(), computed_reward, done, None
 
     def no_update_step(self, action):
         if type(action) is np.ndarray:
@@ -222,8 +218,8 @@ class World_Model():
 
                 ep_reward = 0
                 num_steps = 0
-                ep_state_loss = 0
-                ep_reward_loss = 0
+                ep_state_loss = np.zeros(self.config["FRAME_DENOISE_SIZE"])
+                ep_reward_loss = np.zeros(self.config["FRAME_DENOISE_SIZE"])
 
                 negative_reward_count = 0
 

@@ -20,12 +20,14 @@ def plot_general(agent, epoch, episode, ep_reward, ep_loss, num_steps):
     ax2.set_title('State Loss Over Episodes')
     ax2.set_xlabel('Episodes')
     ax2.set_ylabel('Loss')
-    ax2.scatter(((epoch-1) * 100) + episode, state_loss, color="red", label="state_loss")
+    for loss in state_loss:
+        ax2.scatter(((epoch-1) * 100) + episode, loss, color="red", label="state_loss")
 
     ax3.set_title('Reward Loss Over Episodes')
     ax3.set_xlabel('Episodes')
     ax3.set_ylabel('Loss')
-    ax3.scatter(((epoch-1) * 100) + episode, reward_loss, color="red", label="reward_loss")
+    for loss in reward_loss:
+        ax3.scatter(((epoch-1) * 100) + episode, loss, color="red", label="reward_loss")
 
     ax4.set_title('Duration Over Episodes')
     ax4.set_ylabel('Duration')
@@ -42,7 +44,7 @@ plot_general = Callback(lambda self: plot_general)
 
 
 def display_state(agent, epoch, episode, ep_reward, ep_loss, num_steps):
-    if episode % 10 == 0:
+    if episode % 5 == 0:
         batch = agent.replay_memory.sample(1)
 
         state_batch = torch.cat(batch.state).to(agent.device)
