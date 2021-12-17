@@ -129,7 +129,7 @@ class World_Model():
             else:
                 computed_next_state, computed_reward = self.model(computed_next_state[0:self.config['BATCH_SIZE']-i], action_batch[i:self.config['BATCH_SIZE']])
             state_loss = torch.nn.functional.mse_loss(computed_next_state, next_state_batch[i:self.config['BATCH_SIZE']])
-            reward_loss = torch.nn.functional.mse_loss(computed_reward.squeeze(1), reward_batch[i:self.config['BATCH_SIZE']])
+            reward_loss = torch.nn.functional.mse_loss(computed_reward, reward_batch[i:self.config['BATCH_SIZE']])
 
             total_state_loss[i] = state_loss.item()
             total_reward_loss[i] = reward_loss.item()
