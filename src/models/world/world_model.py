@@ -146,16 +146,16 @@ class World_Model():
 
         return total_state_loss, total_reward_loss
 
-    def reset(self):
+    def reset(self, num_frames_boost=0):
         self.env.reset()
         init_state = self.get_screen(mod="start")
         self.screen_stack = deque([init_state] * self.config['FRAME_STACK'], maxlen=self.config['FRAME_STACK'])
-        '''
-        for _ in range(30):
+
+        for _ in range(num_frames_boost):
             init_state, reward, done, _ = self.env.step(0)
             self.screen_stack.append(self.get_screen())
         self.env.close()
-        '''
+
         return self.render()
 
     def render(self):

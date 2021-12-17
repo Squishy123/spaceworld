@@ -16,9 +16,9 @@ env = gym.make('LunarLander-v2')
 agent = RandomAgent(env.action_space)
 model = World_Model(env, agent, base_config)
 
-model.load("results/world_model_weights_1_60.pth")
+model.load("results_base/world_model_weights_10_100.pth")
 agent = HumanAgent()
-state = model.reset()
+state = model.reset(30)
 reward = 0
 done = False
 

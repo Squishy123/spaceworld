@@ -16,6 +16,7 @@ from PIL import Image, ImageTk, ImageDraw, ImageFont
 import time
 import imageio
 
+
 def center_crop(im, new_width, new_height):
     width, height = im.size   # Get dimensions
 
@@ -27,21 +28,26 @@ def center_crop(im, new_width, new_height):
     # Crop the center of the image
     return im.crop((left, top, right, bottom))
 
+
 env = gym.make('LunarLander-v2')
 agent = RandomAgent(env.action_space)
 model = World_Model(env, agent, base_config)
-model.load("results/world_model_weights_10_100.pth")
+model.load("results_base/world_model_weights_10_100.pth")
 # agent = HumanAgent()
 for b in range(1, 101, 10):
     model.env.reset()
-    state = model.reset()
+    state = model.reset(30)
     reward = 0
     done = False
     env_frame = None
+
+    env_frames = []
+    model_frames = []
+
     with imageio.get_writer(f"decay_test/boosted_{b}_out.mp4", fps=10) as video:
         for i in range(300):
             base = Image.new('RGB', (1280, 720))
-        
+
             # print(i)
             action = agent.act(state, reward, done)
             # print(action)
@@ -49,16 +55,16 @@ for b in range(1, 101, 10):
 
             if not env_done:
                 env_frame = center_crop(Image.fromarray(model.env.render(mode="rgb_array")), 400, 400)
-                
+
                 base.paste(env_frame, (90, 160))
-                
+
                 if i % b == 0:
                     model.screen_stack.extend(model.config["FRAME_STACK"] * [model.get_screen()])
 
             #env_state = model.env.render()
             reward = 0
             for _ in range(1):
-                _, reward, _ = model.step(action)
+                _, reward, _, _ = model.step(action)
             next_state = model.render()
             # print(model.get_screen(mod="end").squeeze(0).squeeze(0).cpu().shape)
             #video.append_data(model.get_screen(mod="end").squeeze(0).cpu().permute(1, 2, 0).numpy())
@@ -68,11 +74,14 @@ for b in range(1, 101, 10):
             state = next_state
             video.append_data(np.array(base))
 
+            env_frames.append(env_frame)
+            model_frames.append(model_frame)
+
             # draw final frames
             if env_done:
                 for _ in range(100):
-                    _, reward, _ = model.step(action)
-                    
+                    _, reward, _, _ = model.step(action)
+
                     base = Image.new('RGB', (1280, 720))
                     model_frame = Image.fromarray((model.render() * 255).astype(np.uint8)).resize((400, 400), Image.NEAREST)
                     base.paste(model_frame, (790, 160))
@@ -80,3 +89,10 @@ for b in range(1, 101, 10):
                     video.append_data(np.array(base))
                 break
 
+    fig, (ax) = plt.subplots(2, 5)
+    ax[0][2].set_title(f"Frame Interpolation - Every {b} Frames")
+    for i in range(5):
+        ax[0][i].imshow(env_frames[i*(len(env_frames)//5)])
+        ax[1][i].imshow(model_frames[i*(len(env_frames)//5)])
+
+    fig.savefig(f"decay_test/boosted_{b}_out.png")
