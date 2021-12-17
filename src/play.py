@@ -18,17 +18,31 @@ model = World_Model(env, agent, base_config)
 
 model.load("results_base/world_model_weights_10_100.pth")
 agent = HumanAgent()
-state = model.reset(30)
+state = model.reset(40)
 reward = 0
 done = False
 
+model_frames = []
+
 while True:
     action = agent.act(state, reward, done)
+    if action == None:
+        break
+
     state, reward, done, _ = model.step(action)
 
+    model_frames.append(model.render())
     plt.imshow(model.render())
     plt.draw()
     plt.pause(1e-5)
 
     if done:
         break
+
+fig, (ax) = plt.subplots(1, 5)
+ax[1].set_title(f"Simulation Test")
+for i in range(5):
+    # ax[0][i].imshow(env_frames[i*(len(env_frames)//5)])
+    ax[i].imshow(model_frames[i*(len(model_frames)//5)])
+
+fig.savefig(f"sim_test_out.png")

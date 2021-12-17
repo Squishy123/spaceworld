@@ -44,6 +44,6 @@ class HumanAgent():
         elif key == "d":
             return 3
         elif key == "q":
-            exit(1)
+            return None
         else:
             return 0

@@ -50,6 +50,10 @@ for b in range(1, 101, 10):
 
             # print(i)
             action = agent.act(state, reward, done)
+            if i < 50:
+                action = 2
+            else:
+                action = 3
             # print(action)
             _, _, env_done, _ = model.env.step(action)
 

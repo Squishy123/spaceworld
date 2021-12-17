@@ -63,3 +63,11 @@ class Transform_Autoencoder(nn.Module):
         x1 = self.decoder(x1)
         # print(x.shape)
         return x1, x2
+
+
+'''
+x = torch.randn(1, 9, 64, 64)
+model = Transform_Autoencoder(frame_stacks=3)
+model(x, 0)
+torch.onnx.export(model, x, "space_world_autoencoder.onnx", input_names=['input'], output_names=['output'], do_constant_folding=True)
+'''
